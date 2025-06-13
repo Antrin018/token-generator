@@ -17,9 +17,17 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.doctor_id as string;
 
-  const callAudioRef = useRef<HTMLAudioElement | null>(null);
   const bellAudioRef = useRef<HTMLAudioElement | null>(null);
- 
+
+  // ✅ New function to speak the token number dynamically
+  const speakTokenNumber = (tokenNumber: number) => {
+    const utterance = new SpeechSynthesisUtterance(
+      `Token number ${tokenNumber}, please proceed to the doctor's room.`
+    );
+    utterance.lang = 'en-IN';
+    utterance.rate = 0.95;
+    speechSynthesis.speak(utterance);
+  };
 
   useEffect(() => {
     if (!doctorId || !ready) return;
@@ -33,14 +41,13 @@ export default function DisplayPage() {
         .order('token_number', { ascending: true })
         .limit(1)
         .single();
-  
+
       if (!error && data) {
         setCalledPatient(data);
       } else {
         setCalledPatient(null);
       }
     }
-  
 
     fetchCalledPatient(); // Initial fetch
 
@@ -63,11 +70,8 @@ export default function DisplayPage() {
               token_number: updated.token_number,
             });
 
-            try {
-              callAudioRef.current?.play();
-            } catch (err) {
-              console.warn('🔇 Could not play call audio:', err);
-            }
+            // 🔊 Speak token number dynamically
+            speakTokenNumber(updated.token_number);
           } else {
             await fetchCalledPatient();
           }
@@ -122,9 +126,9 @@ export default function DisplayPage() {
         )}
       </div>
 
-      {/* Hidden audio elements */}
-      <audio ref={callAudioRef} src="/token.mp3" preload="auto" />
+      {/* Keep bell audio, remove token.mp3 audio */}
       <audio ref={bellAudioRef} src="/recall.mp3" preload="auto" />
     </div>
   );
 }
+
