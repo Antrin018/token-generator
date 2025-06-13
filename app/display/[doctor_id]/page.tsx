@@ -20,24 +20,36 @@ export default function DisplayPage() {
   const bellAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // ✅ New function to speak the token number dynamically
-  const speakTokenNumber = (tokenNumber: number) => {
+const speakTokenNumber = (tokenNumber: number) => {
+  const utterance = new SpeechSynthesisUtterance(
+    `Token number ${tokenNumber}, please proceed to the doctor's room.`
+  );
+  utterance.rate = 0.95;
+
+  // Ensure voices are loaded
+  const loadVoices = () => {
     const voices = speechSynthesis.getVoices();
-    
-    // Try to find a specific voice by name or language
+
+    if (voices.length === 0) {
+      // Voices not loaded yet — wait and retry
+      setTimeout(loadVoices, 100);
+      return;
+    }
+
+    // Try to find a preferred voice
     const selectedVoice =
-      voices.find(v => v.name === 'Google UK English Female') || // Works in Chrome
+      voices.find(v => v.name === 'Google UK English Female') || // Chrome preferred
       voices.find(v => v.lang === 'en-IN') || // fallback to Indian English
-      voices[0]; // final fallback
-  
-    const utterance = new SpeechSynthesisUtterance(
-      `Token number ${tokenNumber}, please proceed to the doctor's room.`
-    );
+      voices[0]; // fallback to first voice
+
     utterance.voice = selectedVoice;
     utterance.lang = selectedVoice.lang;
-    utterance.rate = 0.95;
-  
     speechSynthesis.speak(utterance);
   };
+
+  loadVoices();
+};
+
   
   useEffect(() => {
     if (!doctorId || !ready) return;
