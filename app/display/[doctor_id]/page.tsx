@@ -8,6 +8,7 @@ type Patient = {
   id?: number;
   name: string;
   token_number: number;
+  status?: string;
 };
 
 export default function DisplayPage() {
@@ -15,9 +16,9 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.id as string;
 
-  // Initial fetch – useful in case someone reloads the display page
+  // Fetch initially called patient (in case of refresh)
   async function fetchCalledPatient() {
-    if (!doctorId) return;
+    if (!doctorId) return null;
 
     const { data, error } = await supabase
       .from('patients')
@@ -30,35 +31,43 @@ export default function DisplayPage() {
 
     if (!error && data) {
       setCalledPatient(data);
+      return data;
     } else {
       setCalledPatient(null);
+      return null;
     }
   }
 
   useEffect(() => {
     if (!doctorId) return;
 
-    fetchCalledPatient(); // Initial safety check on mount
+    fetchCalledPatient(); // Fetch once on mount
 
-    const channel = supabase.channel(`doctor-${doctorId}`);
+    const channel = supabase
+      .channel('patients-calls')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'patients',
+          filter: `doctor_id=eq.${doctorId}`,
+        },
+        async (payload) => {
+          const updated = payload.new;
+          console.log('📡 Realtime DB update received:', updated);
 
-    channel
-      .on('broadcast', { event: 'patient-called' }, (payload) => {
-        const data = payload.payload as {
-          doctor_id: string;
-          name: string;
-          token_number: number;
-        };
-
-        console.log('📡 Broadcast received:', data);
-
-        if (String(data.doctor_id )=== String(doctorId)) {
-          setCalledPatient({// no need for real ID
-            name: data.name,
-            token_number: data.token_number,
-          });
+          if (updated.status === 'called') {
+            setCalledPatient({
+              name: updated.name,
+              token_number: updated.token_number,
+            });
+          } else {
+            // If a called patient is marked done or cancelled, refresh state
+            await fetchCalledPatient();
+          }
         }
-      })
+      )
       .subscribe();
 
     return () => {
@@ -69,7 +78,7 @@ export default function DisplayPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4"> Calling</h1>
+        <h1 className="text-4xl font-bold mb-4">Calling</h1>
         {calledPatient ? (
           <>
             <p className="text-6xl font-extrabold mb-2">
