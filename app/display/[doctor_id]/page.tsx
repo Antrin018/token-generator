@@ -1,79 +1,53 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 
-// Create Supabase client (on client side use anon key)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+type Patient = {
+  id: number;
+  name: string;
+  token_number: number;
+};
 
 export default function DisplayPage() {
-  const { id: doctorId } = useParams();
-  const [currentToken, setCurrentToken] = useState<number | null>(null);
-  const [patientName, setPatientName] = useState<string | null>(null);
+  const [calledPatient, setCalledPatient] = useState<Patient | null>(null);
+  const params = useParams();
+  const doctorId = params?.id as string;
 
-  // ✅ Listen for real-time updates
+  async function fetchCalledPatient() {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('id, name, token_number')
+      .eq('doctor_id', doctorId)
+      .eq('status', 'called')
+      .order('token_number', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!error) setCalledPatient(data);
+    else setCalledPatient(null); // Clear if no patient found or error
+  }
+
   useEffect(() => {
-    if (!doctorId) return;
-
-    const subscription = supabase
-      .channel('realtime-patient-display')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'patients',
-          filter: `doctor_id=eq.${doctorId}`,
-        },
-        (payload) => {
-          const updated = payload.new;
-          if (updated.status === 'called') {
-            setCurrentToken(updated.token_number);
-            setPatientName(updated.name);
-          }
-        }
-      )
-      .subscribe();
-
-    // Initial fetch in case of refresh
-    const fetchCurrentlyCalled = async () => {
-      const { data } = await supabase
-        .from('patients')
-        .select('*')
-        .eq('doctor_id', doctorId)
-        .eq('status', 'called')
-        .order('token_number', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (data) {
-        setCurrentToken(data.token_number);
-        setPatientName(data.name);
-      }
-    };
-
-    fetchCurrentlyCalled();
-
-    return () => {
-      supabase.removeChannel(subscription);
-    };
+    fetchCalledPatient(); // Initial load
+    const interval = setInterval(fetchCalledPatient, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
   }, [doctorId]);
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white text-center p-4">
-      <h1 className="text-4xl font-bold mb-6">🎫 Now Serving</h1>
-      {currentToken !== null ? (
-        <>
-          <p className="text-7xl font-extrabold">{currentToken}</p>
-          <p className="text-2xl mt-4">{patientName}</p>
-        </>
-      ) : (
-        <p className="text-2xl">No patient is currently being called.</p>
-      )}
-    </main>
+    <div className="min-h-screen flex items-center justify-center bg-black text-white">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold mb-4">Now Calling</h1>
+        {calledPatient ? (
+          <>
+            <p className="text-6xl font-extrabold mb-2">Token #{calledPatient.token_number}</p>
+            <p className="text-3xl">{calledPatient.name}</p>
+          </>
+        ) : (
+          <p className="text-3xl">No patient being called</p>
+        )}
+      </div>
+    </div>
   );
 }
