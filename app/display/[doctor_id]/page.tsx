@@ -5,10 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 
 type Patient = {
-  id?: number;
   name: string;
   token_number: number;
-  status?: string;
 };
 
 export default function DisplayPage() {
@@ -16,13 +14,12 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.id as string;
 
-  // Fetch initially called patient (in case of refresh)
   async function fetchCalledPatient() {
-    if (!doctorId) return null;
+    if (!doctorId) return;
 
     const { data, error } = await supabase
       .from('patients')
-      .select('id, name, token_number, status')
+      .select('name, token_number')
       .eq('doctor_id', doctorId)
       .eq('status', 'called')
       .order('token_number', { ascending: true })
@@ -31,53 +28,27 @@ export default function DisplayPage() {
 
     if (!error && data) {
       setCalledPatient(data);
-      return data;
     } else {
       setCalledPatient(null);
-      return null;
     }
   }
 
   useEffect(() => {
     if (!doctorId) return;
 
-    fetchCalledPatient(); // Fetch once on mount
+    // Fetch once on mount
+    fetchCalledPatient();
 
-    const channel = supabase
-      .channel('patients-calls')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'patients',
-        },
-        async (payload) => {
-          const updated = payload.new;
-          console.log('📡 Realtime DB update received:', updated);
+    // Poll every 3 seconds
+    const interval = setInterval(fetchCalledPatient, 3000);
 
-          if (updated.status === 'called') {
-            setCalledPatient({
-              name: updated.name,
-              token_number: updated.token_number,
-            });
-          } else {
-            // If a called patient is marked done or cancelled, refresh state
-            await fetchCalledPatient();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => clearInterval(interval);
   }, [doctorId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Calling</h1>
+        <h1 className="text-4xl font-bold mb-4">Now Calling</h1>
         {calledPatient ? (
           <>
             <p className="text-6xl font-extrabold mb-2">
