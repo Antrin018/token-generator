@@ -30,7 +30,7 @@ export default function DoctorDashboard() {
     day: 'numeric',
   });
 
-  const registrationLink = `${process.env.NEXT_PUBLIC_BASE_URL}/register?doctor_id=${doctorId}`; // Change to actual domain
+  const registrationLink = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/register?doctor_id=${doctorId}`; // Change to actual domain
 
   // -------------------------- Session Check --------------------------
   useEffect(() => {
