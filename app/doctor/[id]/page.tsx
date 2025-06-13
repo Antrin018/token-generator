@@ -107,13 +107,32 @@ export default function DoctorDashboard() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ doctor_id: doctorId }),
     });
+  
     const data = await res.json();
-    if (res.ok && data.called){
+  
+    if (res.ok && data.called) {
+      const calledPatient = data.called;
+  
+      // ✅ Send real-time broadcast to display
+      await supabase.channel('called-patient-broadcast').send({
+        type: 'broadcast',
+        event: 'patient-called',
+        payload: {
+          doctor_id: doctorId,
+          name: calledPatient.name,
+          token_number: calledPatient.token_number,
+        },
+      });
+  
+      // Refresh the patient list
       await fetchPatients();
+    } else {
+      console.error('Next patient error:', data.error || data.message);
     }
-    else console.error('Next patient error:', data.error || data.message);
+  
     setLoading(false);
   }
+  
 
   // -------------------------- Polling --------------------------
 

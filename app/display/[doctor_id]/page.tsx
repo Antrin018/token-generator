@@ -8,8 +8,6 @@ type Patient = {
   id: number;
   name: string;
   token_number: number;
-  status?: string;
-  doctor_id?: string | number;
 };
 
 export default function DisplayPage() {
@@ -17,12 +15,13 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.id as string;
 
+  // Initial fetch – useful in case someone reloads the display page
   async function fetchCalledPatient() {
     if (!doctorId) return;
 
     const { data, error } = await supabase
       .from('patients')
-      .select('id, name, token_number, doctor_id, status')
+      .select('id, name, token_number, status')
       .eq('doctor_id', doctorId)
       .eq('status', 'called')
       .order('token_number', { ascending: true })
@@ -39,39 +38,28 @@ export default function DisplayPage() {
   useEffect(() => {
     if (!doctorId) return;
 
-    fetchCalledPatient(); // fetch on mount
+    fetchCalledPatient(); // Initial safety check on mount
 
-    const channel = supabase
-      .channel('called-patient-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'patients',
-        },
-        (payload) => {
-          const newPatient = payload.new as Patient;
+    const channel = supabase.channel('called-patient-broadcast');
 
-          console.log('🔁 Realtime payload:', newPatient);
+    channel
+      .on('broadcast', { event: 'patient-called' }, (payload) => {
+        const data = payload.payload as {
+          doctor_id: string;
+          name: string;
+          token_number: number;
+        };
 
-          // Only update if it's for the current doctor and status is 'called'
-          if (
-            newPatient.status === 'called' &&
-            String(newPatient.doctor_id) === doctorId
-          ) {
-            // Force re-render with a fresh object
-            setCalledPatient(null); // clear first
-            setTimeout(() => {
-              setCalledPatient({
-                id: newPatient.id,
-                name: newPatient.name,
-                token_number: newPatient.token_number,
-              });
-            }, 10);
-          }
+        console.log('📡 Broadcast received:', data);
+
+        if (data.doctor_id === doctorId) {
+          setCalledPatient({
+            id: -1, // no need for real ID
+            name: data.name,
+            token_number: data.token_number,
+          });
         }
-      )
+      })
       .subscribe();
 
     return () => {
