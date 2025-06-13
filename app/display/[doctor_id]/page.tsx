@@ -51,7 +51,6 @@ export default function DisplayPage() {
           event: 'UPDATE',
           schema: 'public',
           table: 'patients',
-          filter: `doctor_id=eq.${doctorId}`,
         },
         async (payload) => {
           const updated = payload.new;
