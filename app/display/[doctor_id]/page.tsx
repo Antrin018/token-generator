@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabaseServer } from '@/lib/supabase-server';
+import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 
 type Patient = {
@@ -18,7 +18,7 @@ export default function DisplayPage() {
 
   // ✅ Fetch the currently called patient
   async function fetchCalledPatient() {
-    const { data, error } = await supabaseServer
+    const { data, error } = await supabase
       .from('patients')
       .select('id, name, token_number')
       .eq('doctor_id', doctorId)
@@ -40,7 +40,7 @@ export default function DisplayPage() {
     fetchCalledPatient(); // Initial fetch
 
     // ✅ Set up real-time listener for updates
-    const channel = supabaseServer
+    const channel = supabase
       .channel('called-patient-channel')
       .on(
         'postgres_changes',
@@ -48,7 +48,6 @@ export default function DisplayPage() {
           event: 'UPDATE',
           schema: 'public',
           table: 'patients',
-          filter: `doctor_id=eq.${doctorId}`,
         },
         (payload) => {
           const newPatient = payload.new as Patient;
@@ -70,7 +69,7 @@ export default function DisplayPage() {
       .subscribe();
 
     return () => {
-      supabaseServer.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, [doctorId]);
 
