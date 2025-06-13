@@ -108,7 +108,16 @@ export default function DoctorDashboard() {
       body: JSON.stringify({ doctor_id: doctorId }),
     });
     const data = await res.json();
-    if (res.ok) await fetchPatients();
+    if (res.ok ) {
+      await fetchPatients();
+      if(data.called){
+        const query = new URLSearchParams({
+          token: data.called.token_number,
+          name: data.called.name,
+        });
+      router.push(`/doctor/${doctorId}/display?${query.toString()}`);
+      }
+    }
     else console.error('Next patient error:', data.error || data.message);
     setLoading(false);
   }

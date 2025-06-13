@@ -62,5 +62,12 @@ export async function POST(req: NextRequest) {
   }
 
   // ✅ Step 4: Just return data — let frontend listen via `postgres_changes`
-  return NextResponse.json({ called: nextPatient });
+  return NextResponse.json({
+    called: {
+      id: nextPatient.id,
+      name: nextPatient.name,
+      token_number: nextPatient.token_number,
+    },
+    message: 'Next patient called successfully',
+  });
 }
