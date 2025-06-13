@@ -21,7 +21,7 @@ export default function DoctorDashboard() {
   const [isOnline, setIsOnline] = useState(true);
   const router = useRouter();
   const params = useParams();
-  const doctorId = params?.id as string;
+  const doctorId = (params?.id as string).trim();
 
   const currentDate = new Date().toLocaleDateString('en-IN', {
     weekday: 'long',
