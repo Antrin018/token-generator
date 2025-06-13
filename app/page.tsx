@@ -57,7 +57,7 @@ export default function HomePage() {
       email,
       options: {
         data: { name },
-        emailRedirectTo: `https://doctor-app-antrin-majis-projects.vercel.app/doctor/${doctor.id}`,
+        emailRedirectTo: `https://token-generator-virid.vercel.app/doctor/${doctor.id}`,
       },
     });
 
