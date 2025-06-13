@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 
 type Patient = {
-  id: number;
+  id?: number;
   name: string;
   token_number: number;
 };
@@ -40,7 +40,7 @@ export default function DisplayPage() {
 
     fetchCalledPatient(); // Initial safety check on mount
 
-    const channel = supabase.channel('c');
+    const channel = supabase.channel('called-patient-broadcast');
 
     channel
       .on('broadcast', { event: 'patient-called' }, (payload) => {
@@ -53,8 +53,7 @@ export default function DisplayPage() {
         console.log('📡 Broadcast received:', data);
 
         if (String(data.doctor_id )=== String(doctorId)) {
-          setCalledPatient({
-            id: -1, // no need for real ID
+          setCalledPatient({// no need for real ID
             name: data.name,
             token_number: data.token_number,
           });
