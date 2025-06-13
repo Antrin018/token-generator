@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 
@@ -17,10 +17,14 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.doctor_id as string;
 
-  // 🔊 Generic speech function
-  const speak = (text: string) => {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US'; // You can also try 'en-US'
+  const bellAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  // ✅ New function to speak the token number dynamically
+  const speakTokenNumber = (tokenNumber: number) => {
+    const utterance = new SpeechSynthesisUtterance(
+      `Token number ${tokenNumber}, please proceed to the doctor's room.`
+    );
+    utterance.lang = 'en-US';
     utterance.rate = 1.0;
     speechSynthesis.speak(utterance);
   };
@@ -66,8 +70,8 @@ export default function DisplayPage() {
               token_number: updated.token_number,
             });
 
-            // Speak the new token number dynamically
-            speak(`Token number ${updated.token_number}, please proceed to the doctor's room.`);
+            // 🔊 Speak token number dynamically
+            speakTokenNumber(updated.token_number);
           } else {
             await fetchCalledPatient();
           }
@@ -79,8 +83,10 @@ export default function DisplayPage() {
       .channel(`doctor:${doctorId}`)
       .on('broadcast', { event: 'ring-bell' }, () => {
         console.log('🔔 Bell ring received!');
-        if (calledPatient) {
-          speak(`Token number ${calledPatient.token_number}, you are being called. Enter the room please.`);
+        try {
+          bellAudioRef.current?.play();
+        } catch (err) {
+          console.warn('🔇 Could not play bell audio:', err);
         }
       })
       .subscribe();
@@ -89,7 +95,7 @@ export default function DisplayPage() {
       supabase.removeChannel(dbChannel);
       supabase.removeChannel(bellChannel);
     };
-  }, [doctorId, ready, calledPatient]);
+  }, [doctorId, ready]);
 
   if (!ready) {
     return (
@@ -119,6 +125,9 @@ export default function DisplayPage() {
           <p className="text-5xl">No patient being called</p>
         )}
       </div>
+
+      {/* Keep bell audio, remove token.mp3 audio */}
+      <audio ref={bellAudioRef} src="/recall.mp3" preload="auto" />
     </div>
   );
 }
