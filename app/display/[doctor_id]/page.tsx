@@ -12,7 +12,7 @@ type Patient = {
 export default function DisplayPage() {
   const [calledPatient, setCalledPatient] = useState<Patient | null>(null);
   const params = useParams();
-  const doctorId = params?.id as string;
+  const doctorId = (params?.id as string).trim();
 
   async function fetchCalledPatient() {
     if (!doctorId) return;
