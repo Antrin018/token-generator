@@ -40,6 +40,43 @@ export default function RegisterPage() {
 
     fetchDoctors();
   }, []);
+  
+  useEffect(() => {
+    if (patientId===null) return;
+  
+    const channel = supabase
+      .channel('patient-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'patients',
+          filter: `id=eq.${patientId}`,
+        },
+        (payload) => {
+          const updated = payload.new;
+          setStatus(updated.status);
+  
+          // 🛎️ Show notification if status changed to 'called'
+          if (updated.status === 'called') {
+            // If permission is granted, show notification
+            if (Notification.permission === 'granted') {
+              new Notification(`🚨 Token ${updated.token_number} Called`, {
+                body: 'Please proceed to the room.',
+              });
+            } else {
+              alert(`🚨 Your Token ${updated.token_number} has been called!`);
+            }
+          }
+        }
+      )
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [patientId]);
 
   // ✅ Register patient
   async function handleSubmit(e: React.FormEvent) {
@@ -115,47 +152,7 @@ export default function RegisterPage() {
     } catch (err) {
       console.error('❌ Failed to log patient to file:', err);
   }
-  
-
-  // 🔁 Listen for status updates
-  useEffect(() => {
-    if (patientId===null) return;
-  
-    const channel = supabase
-      .channel('patient-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'patients',
-          filter: `id=eq.${patientId}`,
-        },
-        (payload) => {
-          const updated = payload.new;
-          setStatus(updated.status);
-  
-          // 🛎️ Show notification if status changed to 'called'
-          if (updated.status === 'called') {
-            // If permission is granted, show notification
-            if (Notification.permission === 'granted') {
-              new Notification(`🚨 Token ${updated.token_number} Called`, {
-                body: 'Please proceed to the room.',
-              });
-            } else {
-              alert(`🚨 Your Token ${updated.token_number} has been called!`);
-            }
-          }
-        }
-      )
-      .subscribe();
-  
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [patientId]);
-  
-
+  }
   // 💬 Show called screen
   if (status === 'called') {
     return (
@@ -251,5 +248,4 @@ export default function RegisterPage() {
   </div>
 </main>
   )
-}
 }

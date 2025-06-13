@@ -19,30 +19,28 @@ export default function DisplayPage() {
 
   const callAudioRef = useRef<HTMLAudioElement | null>(null);
   const bellAudioRef = useRef<HTMLAudioElement | null>(null);
-
-  async function fetchCalledPatient() {
-    if (!doctorId) return null;
-
-    const { data, error } = await supabase
-      .from('patients')
-      .select('id, name, token_number, status')
-      .eq('doctor_id', doctorId)
-      .eq('status', 'called')
-      .order('token_number', { ascending: true })
-      .limit(1)
-      .single();
-
-    if (!error && data) {
-      setCalledPatient(data);
-      return data;
-    } else {
-      setCalledPatient(null);
-      return null;
-    }
-  }
+ 
 
   useEffect(() => {
     if (!doctorId || !ready) return;
+
+    async function fetchCalledPatient() {
+      const { data, error } = await supabase
+        .from('patients')
+        .select('id, name, token_number, status')
+        .eq('doctor_id', doctorId)
+        .eq('status', 'called')
+        .order('token_number', { ascending: true })
+        .limit(1)
+        .single();
+  
+      if (!error && data) {
+        setCalledPatient(data);
+      } else {
+        setCalledPatient(null);
+      }
+    }
+  
 
     fetchCalledPatient(); // Initial fetch
 
