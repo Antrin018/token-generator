@@ -21,14 +21,24 @@ export default function DisplayPage() {
 
   // ✅ New function to speak the token number dynamically
   const speakTokenNumber = (tokenNumber: number) => {
+    const voices = speechSynthesis.getVoices();
+    
+    // Try to find a specific voice by name or language
+    const selectedVoice =
+      voices.find(v => v.name === 'Google UK English Female') || // Works in Chrome
+      voices.find(v => v.lang === 'en-IN') || // fallback to Indian English
+      voices[0]; // final fallback
+  
     const utterance = new SpeechSynthesisUtterance(
       `Token number ${tokenNumber}, please proceed to the doctor's room.`
     );
-    utterance.lang = 'en-IN';
+    utterance.voice = selectedVoice;
+    utterance.lang = selectedVoice.lang;
     utterance.rate = 0.95;
+  
     speechSynthesis.speak(utterance);
   };
-
+  
   useEffect(() => {
     if (!doctorId || !ready) return;
 
@@ -131,4 +141,5 @@ export default function DisplayPage() {
     </div>
   );
 }
+
 
