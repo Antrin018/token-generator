@@ -61,21 +61,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to call next patient' }, { status: 500 });
   }
 
-  // ✅ Step 4: Broadcast to 'doctor-calls' channel
-  const channel = supabase.channel('doctor-calls');
-
-  await channel.send({
-    type: 'broadcast',
-    event: 'called',
-    payload: {
-      id: nextPatient.id,
-      token: nextPatient.token_number,
-      name: nextPatient.name,
-      doctor_id: nextPatient.doctor_id,
-    },
-  });
-
-  // ✅ Step 5: Return the newly called patient
+  // ✅ Step 4: Just return data — let frontend listen via `postgres_changes`
   return NextResponse.json({ called: nextPatient });
 }
-
