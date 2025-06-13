@@ -108,7 +108,9 @@ export default function DoctorDashboard() {
       body: JSON.stringify({ doctor_id: doctorId }),
     });
     const data = await res.json();
-    if (res.ok) await fetchPatients();
+    if (res.ok && data.called){
+      await fetchPatients();
+    }
     else console.error('Next patient error:', data.error || data.message);
     setLoading(false);
   }
