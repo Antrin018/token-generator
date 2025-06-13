@@ -9,6 +9,7 @@ type Patient = {
   name: string;
   token_number: number;
   status?: string;
+  doctor_id?: string | number;
 };
 
 export default function DisplayPage() {
@@ -16,30 +17,30 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.id as string;
 
-  // ✅ Fetch the currently called patient
   async function fetchCalledPatient() {
+    if (!doctorId) return;
+
     const { data, error } = await supabase
       .from('patients')
-      .select('id, name, token_number')
+      .select('id, name, token_number, doctor_id, status')
       .eq('doctor_id', doctorId)
       .eq('status', 'called')
       .order('token_number', { ascending: true })
       .limit(1)
       .single();
 
-    if (!error) {
+    if (!error && data) {
       setCalledPatient(data);
     } else {
-      setCalledPatient(null); // Reset if no one is being called
+      setCalledPatient(null);
     }
   }
 
   useEffect(() => {
     if (!doctorId) return;
 
-    fetchCalledPatient(); // Initial fetch
+    fetchCalledPatient(); // fetch on mount
 
-    // ✅ Set up real-time listener for updates
     const channel = supabase
       .channel('called-patient-channel')
       .on(
@@ -51,19 +52,24 @@ export default function DisplayPage() {
         },
         (payload) => {
           const newPatient = payload.new as Patient;
+
           console.log('🔁 Realtime payload:', newPatient);
 
-          // ✅ Check that status is 'called' before updating display
-          if (newPatient.status === 'called') {
-            setCalledPatient({
-              id: newPatient.id,
-              name: newPatient.name,
-              token_number: newPatient.token_number,
-            });
+          // Only update if it's for the current doctor and status is 'called'
+          if (
+            newPatient.status === 'called' &&
+            String(newPatient.doctor_id) === doctorId
+          ) {
+            // Force re-render with a fresh object
+            setCalledPatient(null); // clear first
+            setTimeout(() => {
+              setCalledPatient({
+                id: newPatient.id,
+                name: newPatient.name,
+                token_number: newPatient.token_number,
+              });
+            }, 10);
           }
-
-          // ✅ Optional safety net: always refetch
-          fetchCalledPatient();
         }
       )
       .subscribe();
@@ -79,7 +85,9 @@ export default function DisplayPage() {
         <h1 className="text-4xl font-bold mb-4">Now Calling</h1>
         {calledPatient ? (
           <>
-            <p className="text-6xl font-extrabold mb-2">Token #{calledPatient.token_number}</p>
+            <p className="text-6xl font-extrabold mb-2">
+              Token #{calledPatient.token_number}
+            </p>
             <p className="text-3xl">{calledPatient.name}</p>
           </>
         ) : (
