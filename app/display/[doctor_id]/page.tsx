@@ -16,7 +16,7 @@ export default function DisplayPage() {
   const params = useParams();
   const doctorId = params?.id as string;
 
-  // Fetch initially in case there's already a patient being called
+  // ✅ Fetch the currently called patient
   async function fetchCalledPatient() {
     const { data, error } = await supabase
       .from('patients')
@@ -27,13 +27,19 @@ export default function DisplayPage() {
       .limit(1)
       .single();
 
-    if (!error) setCalledPatient(data);
-    else setCalledPatient(null); // Clear if not found
+    if (!error) {
+      setCalledPatient(data);
+    } else {
+      setCalledPatient(null); // Reset if no one is being called
+    }
   }
 
   useEffect(() => {
-    fetchCalledPatient(); // on first load
+    if (!doctorId) return;
 
+    fetchCalledPatient(); // Initial fetch
+
+    // ✅ Set up real-time listener for updates
     const channel = supabase
       .channel('called-patient-channel')
       .on(
@@ -46,7 +52,9 @@ export default function DisplayPage() {
         },
         (payload) => {
           const newPatient = payload.new as Patient;
+          console.log('🔁 Realtime payload:', newPatient);
 
+          // ✅ Check that status is 'called' before updating display
           if (newPatient.status === 'called') {
             setCalledPatient({
               id: newPatient.id,
@@ -54,6 +62,9 @@ export default function DisplayPage() {
               token_number: newPatient.token_number,
             });
           }
+
+          // ✅ Optional safety net: always refetch
+          fetchCalledPatient();
         }
       )
       .subscribe();
