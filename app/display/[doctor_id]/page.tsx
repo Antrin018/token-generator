@@ -1,25 +1,31 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
 
 type Patient = {
+  id?: number;
   name: string;
   token_number: number;
+  status?: string;
 };
 
 export default function DisplayPage() {
   const [calledPatient, setCalledPatient] = useState<Patient | null>(null);
+  const [ready, setReady] = useState(false);
   const params = useParams();
-  const doctorId = params?.id as string;
+  const doctorId = params?.doctor_id as string;
+
+  const callAudioRef = useRef<HTMLAudioElement | null>(null);
+  const bellAudioRef = useRef<HTMLAudioElement | null>(null);
 
   async function fetchCalledPatient() {
-    if (!doctorId) return;
+    if (!doctorId) return null;
 
     const { data, error } = await supabase
       .from('patients')
-      .select('name, token_number')
+      .select('id, name, token_number, status')
       .eq('doctor_id', doctorId)
       .eq('status', 'called')
       .order('token_number', { ascending: true })
@@ -28,38 +34,99 @@ export default function DisplayPage() {
 
     if (!error && data) {
       setCalledPatient(data);
+      return data;
     } else {
       setCalledPatient(null);
+      return null;
     }
   }
 
   useEffect(() => {
-    if (!doctorId) return;
+    if (!doctorId || !ready) return;
 
-    // Fetch once on mount
-    fetchCalledPatient();
+    fetchCalledPatient(); // Initial fetch
 
-    // Poll every 3 seconds
-    const interval = setInterval(fetchCalledPatient, 3000);
+    const dbChannel = supabase
+      .channel('patients-calls')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'patients',
+        },
+        async (payload) => {
+          const updated = payload.new;
+          console.log('📡 Realtime DB update received:', updated);
 
-    return () => clearInterval(interval);
-  }, [doctorId]);
+          if (updated.status === 'called') {
+            setCalledPatient({
+              name: updated.name,
+              token_number: updated.token_number,
+            });
+
+            try {
+              callAudioRef.current?.play();
+            } catch (err) {
+              console.warn('🔇 Could not play call audio:', err);
+            }
+          } else {
+            await fetchCalledPatient();
+          }
+        }
+      )
+      .subscribe();
+
+    const bellChannel = supabase
+      .channel(`doctor:${doctorId}`)
+      .on('broadcast', { event: 'ring-bell' }, () => {
+        console.log('🔔 Bell ring received!');
+        try {
+          bellAudioRef.current?.play();
+        } catch (err) {
+          console.warn('🔇 Could not play bell audio:', err);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(dbChannel);
+      supabase.removeChannel(bellChannel);
+    };
+  }, [doctorId, ready]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <button
+          className="px-6 py-3 text-xl bg-indigo-500 hover:bg-indigo-700 rounded-lg shadow-md"
+          onClick={() => setReady(true)}
+        >
+          Start Display
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Now Calling</h1>
+        <h1 className="text-6xl font-bold mb-4">Calling</h1>
         {calledPatient ? (
           <>
-            <p className="text-6xl font-extrabold mb-2">
-              Token #{calledPatient.token_number}
+            <p className="text-8xl font-extrabold mb-2">
+              Token: #{calledPatient.token_number}
             </p>
-            <p className="text-3xl">{calledPatient.name}</p>
+            <p className="text-5xl">{calledPatient.name}</p>
           </>
         ) : (
-          <p className="text-3xl">No patient being called</p>
+          <p className="text-5xl">No patient being called</p>
         )}
       </div>
+
+      {/* Hidden audio elements */}
+      <audio ref={callAudioRef} src="/token.mp3" preload="auto" />
+      <audio ref={bellAudioRef} src="/recall.mp3" preload="auto" />
     </div>
   );
 }

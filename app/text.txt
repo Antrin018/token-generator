@@ -1,0 +1,2 @@
+https://token-generator-virid.vercel.app/doctor/${doctor.id}
+https://token-generator-virid.vercel.app

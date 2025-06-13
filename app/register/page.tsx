@@ -101,6 +101,19 @@ export default function RegisterPage() {
     setToken(data.token);
     setPatientId(data.id);
     setLoading(false);
+
+    try {
+      await fetch('/api/log-patient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          doctorId: selectedDoctorId,
+        }),
+      });
+    } catch (err) {
+      console.error('❌ Failed to log patient to file:', err);
   }
   
 
@@ -238,4 +251,5 @@ export default function RegisterPage() {
   </div>
 </main>
   )
+}
 }
