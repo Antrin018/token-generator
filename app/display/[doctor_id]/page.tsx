@@ -40,7 +40,7 @@ export default function DisplayPage() {
 
     fetchCalledPatient(); // Initial safety check on mount
 
-    const channel = supabase.channel('called-patient-broadcast');
+    const channel = supabase.channel(`doctor-${doctorId}`);
 
     channel
       .on('broadcast', { event: 'patient-called' }, (payload) => {
@@ -69,7 +69,7 @@ export default function DisplayPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white">
       <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Now Calling</h1>
+        <h1 className="text-4xl font-bold mb-4"> Calling</h1>
         {calledPatient ? (
           <>
             <p className="text-6xl font-extrabold mb-2">

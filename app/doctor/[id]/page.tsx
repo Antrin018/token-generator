@@ -114,7 +114,7 @@ export default function DoctorDashboard() {
       const calledPatient = data.called;
   
       // ✅ Send real-time broadcast to display
-      await supabase.channel('called-patient-broadcast').send({
+      await supabase.channel(`doctor-${doctorId}`).send({
         type: 'broadcast',
         event: 'patient-called',
         payload: {
