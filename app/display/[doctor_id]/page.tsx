@@ -40,7 +40,7 @@ export default function DisplayPage() {
 
     fetchCalledPatient(); // Initial safety check on mount
 
-    const channel = supabase.channel('called-patient-broadcast');
+    const channel = supabase.channel('c');
 
     channel
       .on('broadcast', { event: 'patient-called' }, (payload) => {
@@ -52,7 +52,7 @@ export default function DisplayPage() {
 
         console.log('📡 Broadcast received:', data);
 
-        if (data.doctor_id === doctorId) {
+        if (String(data.doctor_id )=== String(doctorId)) {
           setCalledPatient({
             id: -1, // no need for real ID
             name: data.name,
