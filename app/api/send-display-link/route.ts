@@ -12,7 +12,7 @@ export async function POST(req: Request) {
 
   try {
     const { error } = await resend.emails.send({
-      from: process.env.RESEND_FROM,
+      from: 'asyncartemis@display.thecallinghub.com',
       to: email,
       subject: 'Your Display Page Link',
       html: `<p>Hello Doctor,</p>
