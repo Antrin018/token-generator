@@ -57,7 +57,7 @@ export default function HomePage() {
       email,
       options: {
         data: { name },
-        emailRedirectTo: `https://token-generator-virid.vercel.app/doctor/${doctor.id}`,
+        emailRedirectTo: `https://app.thecallinghub.com/doctor/${doctor.id}`,
       },
     });
 
