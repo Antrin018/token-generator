@@ -19,12 +19,44 @@ export default function DisplayPage() {
 
   const bellAudioRef = useRef<HTMLAudioElement | null>(null);
 
+  // ✅ Use ref to store available voices
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  // ✅ Prefetch voices safely
+  const loadVoices = () => {
+    return new Promise<SpeechSynthesisVoice[]>((resolve) => {
+      let voices = speechSynthesis.getVoices();
+      if (voices.length) {
+        resolve(voices);
+      } else {
+        speechSynthesis.onvoiceschanged = () => {
+          voices = speechSynthesis.getVoices();
+          resolve(voices);
+        };
+      }
+    });
+  };
+
+  const unlockSpeechSynthesis = async () => {
+    const dummy = new SpeechSynthesisUtterance('');
+    speechSynthesis.speak(dummy);
+
+    voicesRef.current = await loadVoices();
+    console.log('🔊 Voices loaded:', voicesRef.current.map(v => v.name));
+  };
+
   // ✅ New function to speak the token number dynamically
   const speakTokenNumber = (tokenNumber: number) => {
     const utterance = new SpeechSynthesisUtterance(
       `Token number ${tokenNumber}, please proceed to the doctor's room.`
     );
-    utterance.lang = 'en-US';
+
+    const voice =
+      voicesRef.current.find(v => v.lang === 'en-US' || v.lang === 'en-IN') ||
+      voicesRef.current[0];
+
+    if (voice) utterance.voice = voice;
+    utterance.lang = voice?.lang || 'en-US';
     utterance.rate = 1.0;
     speechSynthesis.speak(utterance);
   };
@@ -49,7 +81,7 @@ export default function DisplayPage() {
       }
     }
 
-    fetchCalledPatient(); // Initial fetch
+    fetchCalledPatient();
 
     const dbChannel = supabase
       .channel('patients-calls')
@@ -69,8 +101,6 @@ export default function DisplayPage() {
               name: updated.name,
               token_number: updated.token_number,
             });
-
-            // 🔊 Speak token number dynamically
             speakTokenNumber(updated.token_number);
           } else {
             await fetchCalledPatient();
@@ -102,7 +132,10 @@ export default function DisplayPage() {
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
         <button
           className="px-6 py-3 text-xl bg-indigo-500 hover:bg-indigo-700 rounded-lg shadow-md"
-          onClick={() => setReady(true)}
+          onClick={async () => {
+            await unlockSpeechSynthesis(); // ✅ Unlock speech on tap
+            setReady(true); // ✅ Then start
+          }}
         >
           Start Display
         </button>
@@ -126,7 +159,6 @@ export default function DisplayPage() {
         )}
       </div>
 
-      {/* Keep bell audio, remove token.mp3 audio */}
       <audio ref={bellAudioRef} src="/recall.mp3" preload="auto" />
     </div>
   );
