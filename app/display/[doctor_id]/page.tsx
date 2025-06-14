@@ -52,7 +52,7 @@ export default function DisplayPage() {
     );
 
     const voice =
-      voicesRef.current.find(v => v.lang === 'en-US') ||
+      voicesRef.current.find(v => v.lang === 'en-US'|| v.lang === 'en-IN') ||
       voicesRef.current[0];
 
     if (voice) utterance.voice = voice;
