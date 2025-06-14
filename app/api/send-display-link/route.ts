@@ -8,11 +8,11 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function POST(req: Request) {
   const { email, doctorId } = await req.json();
 
-  const displayUrl = `https://token-generator-virid.vercel.app/display/${doctorId}`;
+  const displayUrl = `https://app.thecallinghub.com/display/${doctorId}`;
 
   try {
     const { error } = await resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: process.env.RESEND_FROM,
       to: email,
       subject: 'Your Display Page Link',
       html: `<p>Hello Doctor,</p>
