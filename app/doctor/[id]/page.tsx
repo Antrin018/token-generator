@@ -30,7 +30,7 @@ export default function DoctorDashboard() {
     day: 'numeric',
   });
 
-  const registrationLink = `https://token-generator-virid.vercel.app/register?doctor_id=${doctorId}`; // Change to actual domain
+  const registrationLink = `https://app.thecallinghub.com/register?doctor_id=${doctorId}`; // Change to actual domain
 
   // -------------------------- Session Check --------------------------
   useEffect(() => {
